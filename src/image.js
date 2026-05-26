@@ -29,75 +29,78 @@ const BASE_HEIGHT = 1083;
  */
 const CELL_POSITIONS = [
   [
-    { x: 167, y: 294 },   // row 0, SUN
-    { x: 367, y: 294 },   // row 0, MON
-    { x: 566, y: 294 },   // row 0, TUE
-    { x: 765, y: 294 },   // row 0, WED
-    { x: 963, y: 294 },   // row 0, THU
-    { x: 1161, y: 294 },  // row 0, FRI
-    { x: 1358, y: 294 },  // row 0, SAT
+    { x: 167, y: 294 },
+    { x: 367, y: 294 },
+    { x: 566, y: 294 },
+    { x: 765, y: 294 },
+    { x: 963, y: 294 },
+    { x: 1161, y: 294 },
+    { x: 1358, y: 294 },
   ],
   [
-    { x: 167, y: 434 },   // row 1, SUN
-    { x: 367, y: 434 },   // row 1, MON
-    { x: 566, y: 434 },   // row 1, TUE
-    { x: 765, y: 434 },   // row 1, WED
-    { x: 963, y: 434 },   // row 1, THU
-    { x: 1161, y: 434 },  // row 1, FRI
-    { x: 1358, y: 434 },  // row 1, SAT
+    { x: 167, y: 434 },
+    { x: 367, y: 434 },
+    { x: 566, y: 434 },
+    { x: 765, y: 434 },
+    { x: 963, y: 434 },
+    { x: 1161, y: 434 },
+    { x: 1358, y: 434 },
   ],
   [
-    { x: 167, y: 575 },   // row 2, SUN
-    { x: 367, y: 575 },   // row 2, MON
-    { x: 566, y: 575 },   // row 2, TUE
-    { x: 765, y: 575 },   // row 2, WED
-    { x: 963, y: 575 },   // row 2, THU
-    { x: 1161, y: 575 },  // row 2, FRI
-    { x: 1358, y: 575 },  // row 2, SAT
+    { x: 167, y: 575 },
+    { x: 367, y: 575 },
+    { x: 566, y: 575 },
+    { x: 765, y: 575 },
+    { x: 963, y: 575 },
+    { x: 1161, y: 575 },
+    { x: 1358, y: 575 },
   ],
   [
-    { x: 167, y: 715 },   // row 3, SUN
-    { x: 367, y: 715 },   // row 3, MON
-    { x: 566, y: 715 },   // row 3, TUE
-    { x: 765, y: 715 },   // row 3, WED
-    { x: 963, y: 715 },   // row 3, THU
-    { x: 1161, y: 715 },  // row 3, FRI
-    { x: 1358, y: 715 },  // row 3, SAT
+    { x: 167, y: 715 },
+    { x: 367, y: 715 },
+    { x: 566, y: 715 },
+    { x: 765, y: 715 },
+    { x: 963, y: 715 },
+    { x: 1161, y: 715 },
+    { x: 1358, y: 715 },
   ],
   [
-    { x: 167, y: 855 },   // row 4, SUN
-    { x: 367, y: 855 },   // row 4, MON
-    { x: 566, y: 855 },   // row 4, TUE
-    { x: 765, y: 855 },   // row 4, WED
-    { x: 963, y: 855 },   // row 4, THU
-    { x: 1161, y: 855 },  // row 4, FRI
-    { x: 1358, y: 855 },  // row 4, SAT
+    { x: 167, y: 855 },
+    { x: 367, y: 855 },
+    { x: 566, y: 855 },
+    { x: 765, y: 855 },
+    { x: 963, y: 855 },
+    { x: 1161, y: 855 },
+    { x: 1358, y: 855 },
   ],
   [
-    { x: 167, y: 995 },   // row 5, SUN
-    { x: 367, y: 995 },   // row 5, MON
-    { x: 566, y: 995 },   // row 5, TUE
-    { x: 765, y: 995 },   // row 5, WED
-    { x: 963, y: 995 },   // row 5, THU
-    { x: 1161, y: 995 },  // row 5, FRI
-    { x: 1358, y: 995 },  // row 5, SAT
+    { x: 167, y: 995 },
+    { x: 367, y: 995 },
+    { x: 566, y: 995 },
+    { x: 765, y: 995 },
+    { x: 963, y: 995 },
+    { x: 1161, y: 995 },
+    { x: 1358, y: 995 },
   ],
 ];
 
 /**
  * 숫자 위치
- * - 왼쪽으로 조금 이동
- * - 아래로 조금 이동
  */
 const DATE_OFFSET_X = -28;
 const DATE_OFFSET_Y = -38;
 
 /**
  * 도장 크기
- * 27일 버전 느낌에서 조금 더 키운 값
  */
 const NORMAL_STAMP_SIZE = 112;
 const TODAY_STAMP_SIZE = 126;
+
+/**
+ * 제목 위치
+ * 값이 커질수록 아래로 내려감
+ */
+const TITLE_Y = 138;
 
 function sx(width, value) {
   return (value / BASE_WIDTH) * width;
@@ -192,7 +195,7 @@ function makeTextLayer({ year, month, width, height }) {
 
       <text
         x="${width * 0.5}"
-        y="${sy(height, 120)}"
+        y="${sy(height, TITLE_Y)}"
         text-anchor="middle"
         font-family="CuteFont, Arial, sans-serif"
         font-size="${titleFontSize}"
