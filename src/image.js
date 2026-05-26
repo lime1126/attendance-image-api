@@ -8,6 +8,26 @@ const TEMPLATE_PATH = path.join(ROOT, "assets", "calendar-template.png");
 const STAMP_PATH = path.join(ROOT, "assets", "stamp-attend.png");
 const FONT_PATH = path.join(ROOT, "assets", "fonts", "cute-font.ttf");
 
+const BASE_WIDTH = 1493;
+const BASE_HEIGHT = 1053;
+
+// 이 값들이 실제 달력 격자의 바깥쪽 기준입니다.
+// 기준 이미지: 1493 x 1053
+const BASE_GRID = {
+  left: 68,
+  top: 219,
+  right: 1416,
+  bottom: 1018,
+};
+
+function sx(width, value) {
+  return (value / BASE_WIDTH) * width;
+}
+
+function sy(height, value) {
+  return (value / BASE_HEIGHT) * height;
+}
+
 function getMonthName(month) {
   return [
     "January",
@@ -45,12 +65,21 @@ function getCalendarLayout(year, month) {
 }
 
 function getGrid(width, height) {
+  const left = sx(width, BASE_GRID.left);
+  const top = sy(height, BASE_GRID.top);
+  const right = sx(width, BASE_GRID.right);
+  const bottom = sy(height, BASE_GRID.bottom);
+
+  const cellW = (right - left) / 7;
+  const cellH = (bottom - top) / 6;
+
   return {
-    // 템플릿 실제 칸 기준으로 다시 잡은 값
-    startX: width * 0.046,
-    startY: height * 0.202,
-    cellW: width * 0.127,
-    cellH: height * 0.126,
+    left,
+    top,
+    right,
+    bottom,
+    cellW,
+    cellH,
   };
 }
 
@@ -59,18 +88,24 @@ function makeTextLayer({ year, month, width, height }) {
   const days = getCalendarLayout(year, month);
   const grid = getGrid(width, height);
 
+  const dateFontSize = Math.round(sx(width, 30));
+  const titleFontSize = Math.round(sx(width, 64));
+
   const dateTexts = days
     .map(({ day, row, col }) => {
-      // 날짜는 각 칸 좌상단 쪽에 작게 배치
-      const x = grid.startX + col * grid.cellW + grid.cellW * 0.36;
-      const y = grid.startY + row * grid.cellH + grid.cellH * 0.30;
+      const cellX = grid.left + col * grid.cellW;
+      const cellY = grid.top + row * grid.cellH;
+
+      // 날짜는 각 칸의 좌상단, 고양이 아이콘 오른쪽 아래
+      const x = cellX + sx(width, 70);
+      const y = cellY + sy(height, 44);
 
       return `
         <text
           x="${x}"
           y="${y}"
           font-family="CuteFont, Arial, sans-serif"
-          font-size="${Math.round(width * 0.026)}"
+          font-size="${dateFontSize}"
           fill="#6373C7"
           text-anchor="middle"
         >${day}</text>
@@ -78,7 +113,6 @@ function makeTextLayer({ year, month, width, height }) {
     })
     .join("");
 
-  // 한글이 깨져서 일단 영어 제목 사용
   const title = `${getMonthName(month)} ${year}`;
 
   return Buffer.from(`
@@ -94,10 +128,10 @@ function makeTextLayer({ year, month, width, height }) {
 
       <text
         x="${width * 0.5}"
-        y="${height * 0.095}"
+        y="${sy(height, 100)}"
         text-anchor="middle"
         font-family="CuteFont, Arial, sans-serif"
-        font-size="${Math.round(width * 0.05)}"
+        font-size="${titleFontSize}"
         fill="#6373C7"
       >${title}</text>
 
@@ -114,8 +148,8 @@ async function makeStampComposites({
   attendedDays,
   today,
 }) {
-  const normalStampSize = Math.round(width * 0.065);
-  const todayStampSize = Math.round(width * 0.078);
+  const normalStampSize = Math.round(sx(width, 82));
+  const todayStampSize = Math.round(sx(width, 98));
 
   const normalStamp = await sharp(STAMP_PATH)
     .resize({
@@ -146,9 +180,12 @@ async function makeStampComposites({
     const stampBuffer = isToday ? todayStamp : normalStamp;
     const stampSize = isToday ? todayStampSize : normalStampSize;
 
-    // 도장은 날짜 숫자를 덜 가리게 칸 중앙보다 살짝 아래쪽
-    const centerX = grid.startX + col * grid.cellW + grid.cellW * 0.50;
-    const centerY = grid.startY + row * grid.cellH + grid.cellH * 0.62;
+    const cellX = grid.left + col * grid.cellW;
+    const cellY = grid.top + row * grid.cellH;
+
+    // 도장은 칸 내부 중앙보다 살짝 아래쪽
+    const centerX = cellX + grid.cellW * 0.5;
+    const centerY = cellY + grid.cellH * 0.62;
 
     composites.push({
       input: stampBuffer,
