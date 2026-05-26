@@ -1,11 +1,13 @@
 require("dotenv").config();
 
 const express = require("express");
+const cors = require("cors");
 const { supabase } = require("./supabase");
 const { generateAttendanceImage } = require("./image");
 
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 
 function checkApiSecret(req, res, next) {
@@ -82,8 +84,8 @@ async function getAttendedDays(userId, year, month) {
   }
 
   return data.map((row) => {
-    const date = new Date(row.attendance_date);
-    return date.getUTCDate();
+    const parts = String(row.attendance_date).split("-");
+    return Number(parts[2]);
   });
 }
 
