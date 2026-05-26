@@ -1,4 +1,3 @@
-
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
@@ -87,7 +86,6 @@ const CELL_POSITIONS = [
 
 /**
  * 숫자 위치
- * 이전보다:
  * - 왼쪽으로 조금 이동
  * - 아래로 조금 이동
  */
@@ -194,7 +192,7 @@ function makeTextLayer({ year, month, width, height }) {
 
       <text
         x="${width * 0.5}"
-        y="${sy(height, 100)}"
+        y="${sy(height, 120)}"
         text-anchor="middle"
         font-family="CuteFont, Arial, sans-serif"
         font-size="${titleFontSize}"
