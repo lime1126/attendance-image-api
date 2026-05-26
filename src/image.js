@@ -8,33 +8,95 @@ const TEMPLATE_PATH = path.join(ROOT, "assets", "calendar-template.png");
 const STAMP_PATH = path.join(ROOT, "assets", "stamp-attend.png");
 const FONT_PATH = path.join(ROOT, "assets", "fonts", "cute-font.ttf");
 
-const BASE_WIDTH = 1493;
-const BASE_HEIGHT = 1053;
+/**
+ * 기준 이미지 크기
+ * 네가 올린 빈 달력 템플릿 기준
+ */
+const BASE_WIDTH = 1536;
+const BASE_HEIGHT = 1083;
 
 /**
- * 실제 달력 격자 기준 좌표
- * 기준 이미지 크기: 1493 x 1053
+ * 7열 x 6행 전체 칸별 개별 좌표
+ * 각 값은 "도장 중심 좌표" 기준.
+ *
+ * 구조:
+ * CELL_POSITIONS[row][col]
+ *
+ * col:
+ * 0 = SUN
+ * 1 = MON
+ * 2 = TUE
+ * 3 = WED
+ * 4 = THU
+ * 5 = FRI
+ * 6 = SAT
  */
-const BASE_GRID = {
-  left: 68,
-  top: 219,
-  right: 1416,
-  bottom: 1018,
-};
+const CELL_POSITIONS = [
+  [
+    { x: 167, y: 294 },   // row 0, SUN
+    { x: 367, y: 294 },   // row 0, MON
+    { x: 566, y: 294 },   // row 0, TUE
+    { x: 765, y: 294 },   // row 0, WED
+    { x: 963, y: 294 },   // row 0, THU
+    { x: 1161, y: 294 },  // row 0, FRI
+    { x: 1358, y: 294 },  // row 0, SAT
+  ],
+  [
+    { x: 167, y: 434 },   // row 1, SUN
+    { x: 367, y: 434 },   // row 1, MON
+    { x: 566, y: 434 },   // row 1, TUE
+    { x: 765, y: 434 },   // row 1, WED
+    { x: 963, y: 434 },   // row 1, THU
+    { x: 1161, y: 434 },  // row 1, FRI
+    { x: 1358, y: 434 },  // row 1, SAT
+  ],
+  [
+    { x: 167, y: 575 },   // row 2, SUN
+    { x: 367, y: 575 },   // row 2, MON
+    { x: 566, y: 575 },   // row 2, TUE
+    { x: 765, y: 575 },   // row 2, WED
+    { x: 963, y: 575 },   // row 2, THU
+    { x: 1161, y: 575 },  // row 2, FRI
+    { x: 1358, y: 575 },  // row 2, SAT
+  ],
+  [
+    { x: 167, y: 715 },   // row 3, SUN
+    { x: 367, y: 715 },   // row 3, MON
+    { x: 566, y: 715 },   // row 3, TUE
+    { x: 765, y: 715 },   // row 3, WED
+    { x: 963, y: 715 },   // row 3, THU
+    { x: 1161, y: 715 },  // row 3, FRI
+    { x: 1358, y: 715 },  // row 3, SAT
+  ],
+  [
+    { x: 167, y: 855 },   // row 4, SUN
+    { x: 367, y: 855 },   // row 4, MON
+    { x: 566, y: 855 },   // row 4, TUE ← 26일 기준
+    { x: 765, y: 855 },   // row 4, WED
+    { x: 963, y: 855 },   // row 4, THU
+    { x: 1161, y: 855 },  // row 4, FRI
+    { x: 1358, y: 855 },  // row 4, SAT
+  ],
+  [
+    { x: 167, y: 995 },   // row 5, SUN
+    { x: 367, y: 995 },   // row 5, MON
+    { x: 566, y: 995 },   // row 5, TUE
+    { x: 765, y: 995 },   // row 5, WED
+    { x: 963, y: 995 },   // row 5, THU
+    { x: 1161, y: 995 },  // row 5, FRI
+    { x: 1358, y: 995 },  // row 5, SAT
+  ],
+];
 
 /**
- * 위치 미세 조정값
- * 숫자가 마음에 안 들면 DATE_X_OFFSET / DATE_Y_OFFSET만 조정
- * 도장이 마음에 안 들면 STAMP_Y_RATIO / STAMP_SIZE만 조정
+ * 날짜 숫자는 도장 중심 기준으로 위쪽/왼쪽에 배치
+ * 26일처럼 도장이 숫자를 살짝 덮는 느낌.
  */
-const DATE_X_OFFSET = 78;
-const DATE_Y_OFFSET = 47;
+const DATE_OFFSET_X = -18;
+const DATE_OFFSET_Y = -48;
 
 const NORMAL_STAMP_SIZE = 94;
 const TODAY_STAMP_SIZE = 110;
-
-const STAMP_X_RATIO = 0.5;
-const STAMP_Y_RATIO = 0.64;
 
 function sx(width, value) {
   return (value / BASE_WIDTH) * width;
@@ -42,6 +104,13 @@ function sx(width, value) {
 
 function sy(height, value) {
   return (value / BASE_HEIGHT) * height;
+}
+
+function scalePoint(width, height, point) {
+  return {
+    x: sx(width, point.x),
+    y: sy(height, point.y),
+  };
 }
 
 function getMonthName(month) {
@@ -80,40 +149,19 @@ function getCalendarLayout(year, month) {
   return days;
 }
 
-function getGrid(width, height) {
-  const left = sx(width, BASE_GRID.left);
-  const top = sy(height, BASE_GRID.top);
-  const right = sx(width, BASE_GRID.right);
-  const bottom = sy(height, BASE_GRID.bottom);
-
-  const cellW = (right - left) / 7;
-  const cellH = (bottom - top) / 6;
-
-  return {
-    left,
-    top,
-    right,
-    bottom,
-    cellW,
-    cellH,
-  };
-}
-
 function makeTextLayer({ year, month, width, height }) {
   const fontBase64 = fs.readFileSync(FONT_PATH).toString("base64");
   const days = getCalendarLayout(year, month);
-  const grid = getGrid(width, height);
 
   const dateFontSize = Math.round(sx(width, 30));
   const titleFontSize = Math.round(sx(width, 64));
 
   const dateTexts = days
     .map(({ day, row, col }) => {
-      const cellX = grid.left + col * grid.cellW;
-      const cellY = grid.top + row * grid.cellH;
+      const center = scalePoint(width, height, CELL_POSITIONS[row][col]);
 
-      const x = cellX + sx(width, DATE_X_OFFSET);
-      const y = cellY + sy(height, DATE_Y_OFFSET);
+      const x = center.x + sx(width, DATE_OFFSET_X);
+      const y = center.y + sy(height, DATE_OFFSET_Y);
 
       return `
         <text
@@ -184,27 +232,22 @@ async function makeStampComposites({
     .png()
     .toBuffer();
 
-  const grid = getGrid(width, height);
   const days = getCalendarLayout(year, month);
   const composites = [];
 
   for (const { day, row, col } of days) {
     if (!attendedDays.includes(day)) continue;
 
+    const center = scalePoint(width, height, CELL_POSITIONS[row][col]);
+
     const isToday = today && day === today;
     const stampBuffer = isToday ? todayStamp : normalStamp;
     const stampSize = isToday ? todayStampSize : normalStampSize;
 
-    const cellX = grid.left + col * grid.cellW;
-    const cellY = grid.top + row * grid.cellH;
-
-    const centerX = cellX + grid.cellW * STAMP_X_RATIO;
-    const centerY = cellY + grid.cellH * STAMP_Y_RATIO;
-
     composites.push({
       input: stampBuffer,
-      left: Math.round(centerX - stampSize / 2),
-      top: Math.round(centerY - stampSize / 2),
+      left: Math.round(center.x - stampSize / 2),
+      top: Math.round(center.y - stampSize / 2),
     });
   }
 
