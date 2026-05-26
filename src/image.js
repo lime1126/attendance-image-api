@@ -1,3 +1,4 @@
+
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
@@ -10,17 +11,13 @@ const FONT_PATH = path.join(ROOT, "assets", "fonts", "cute-font.ttf");
 
 /**
  * 기준 이미지 크기
- * 네가 올린 빈 달력 템플릿 기준
+ * 현재 달력 템플릿 기준
  */
 const BASE_WIDTH = 1536;
 const BASE_HEIGHT = 1083;
 
 /**
- * 7열 x 6행 전체 칸별 개별 좌표
- * 각 값은 "도장 중심 좌표" 기준.
- *
- * 구조:
- * CELL_POSITIONS[row][col]
+ * 7열 x 6행 전체 칸별 도장 중심 좌표
  *
  * col:
  * 0 = SUN
@@ -71,7 +68,7 @@ const CELL_POSITIONS = [
   [
     { x: 167, y: 855 },   // row 4, SUN
     { x: 367, y: 855 },   // row 4, MON
-    { x: 566, y: 855 },   // row 4, TUE ← 26일 기준
+    { x: 566, y: 855 },   // row 4, TUE
     { x: 765, y: 855 },   // row 4, WED
     { x: 963, y: 855 },   // row 4, THU
     { x: 1161, y: 855 },  // row 4, FRI
@@ -89,14 +86,20 @@ const CELL_POSITIONS = [
 ];
 
 /**
- * 날짜 숫자는 도장 중심 기준으로 위쪽/왼쪽에 배치
- * 26일처럼 도장이 숫자를 살짝 덮는 느낌.
+ * 숫자 위치
+ * 이전보다:
+ * - 왼쪽으로 조금 이동
+ * - 아래로 조금 이동
  */
-const DATE_OFFSET_X = -18;
-const DATE_OFFSET_Y = -48;
+const DATE_OFFSET_X = -28;
+const DATE_OFFSET_Y = -38;
 
-const NORMAL_STAMP_SIZE = 94;
-const TODAY_STAMP_SIZE = 110;
+/**
+ * 도장 크기
+ * 27일 버전 느낌에서 조금 더 키운 값
+ */
+const NORMAL_STAMP_SIZE = 112;
+const TODAY_STAMP_SIZE = 126;
 
 function sx(width, value) {
   return (value / BASE_WIDTH) * width;
