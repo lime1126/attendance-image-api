@@ -31,10 +31,6 @@ function makeTextLayer({ year, month, width, height }) {
   const fontBase64 = fs.readFileSync(FONT_PATH).toString("base64");
   const days = getCalendarLayout(year, month);
 
-  /*
-    템플릿 이미지 기준 좌표입니다.
-    나중에 날짜 위치가 살짝 안 맞으면 여기만 조정하면 됩니다.
-  */
   const grid = {
     startX: width * 0.082,
     startY: height * 0.245,
@@ -44,7 +40,7 @@ function makeTextLayer({ year, month, width, height }) {
 
   const dateTexts = days
     .map(({ day, row, col }) => {
-      const x = grid.startX + col * grid.cellW + grid.cellW * 0.16;
+      const x = grid.startX + col * grid.cellW + grid.cellW * 0.17;
       const y = grid.startY + row * grid.cellH + grid.cellH * 0.34;
 
       return `
@@ -52,7 +48,7 @@ function makeTextLayer({ year, month, width, height }) {
           x="${x}"
           y="${y}"
           font-family="CuteFont"
-          font-size="${Math.round(width * 0.03)}"
+          font-size="${Math.round(width * 0.031)}"
           fill="#6373C7"
         >${day}</text>
       `;
