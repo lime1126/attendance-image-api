@@ -11,14 +11,30 @@ const FONT_PATH = path.join(ROOT, "assets", "fonts", "cute-font.ttf");
 const BASE_WIDTH = 1493;
 const BASE_HEIGHT = 1053;
 
-// 이 값들이 실제 달력 격자의 바깥쪽 기준입니다.
-// 기준 이미지: 1493 x 1053
+/**
+ * 실제 달력 격자 기준 좌표
+ * 기준 이미지 크기: 1493 x 1053
+ */
 const BASE_GRID = {
   left: 68,
   top: 219,
   right: 1416,
   bottom: 1018,
 };
+
+/**
+ * 위치 미세 조정값
+ * 숫자가 마음에 안 들면 DATE_X_OFFSET / DATE_Y_OFFSET만 조정
+ * 도장이 마음에 안 들면 STAMP_Y_RATIO / STAMP_SIZE만 조정
+ */
+const DATE_X_OFFSET = 78;
+const DATE_Y_OFFSET = 47;
+
+const NORMAL_STAMP_SIZE = 94;
+const TODAY_STAMP_SIZE = 110;
+
+const STAMP_X_RATIO = 0.5;
+const STAMP_Y_RATIO = 0.64;
 
 function sx(width, value) {
   return (value / BASE_WIDTH) * width;
@@ -96,9 +112,8 @@ function makeTextLayer({ year, month, width, height }) {
       const cellX = grid.left + col * grid.cellW;
       const cellY = grid.top + row * grid.cellH;
 
-      // 날짜는 각 칸의 좌상단, 고양이 아이콘 오른쪽 아래
-      const x = cellX + sx(width, 70);
-      const y = cellY + sy(height, 44);
+      const x = cellX + sx(width, DATE_X_OFFSET);
+      const y = cellY + sy(height, DATE_Y_OFFSET);
 
       return `
         <text
@@ -148,8 +163,8 @@ async function makeStampComposites({
   attendedDays,
   today,
 }) {
-  const normalStampSize = Math.round(sx(width, 82));
-  const todayStampSize = Math.round(sx(width, 98));
+  const normalStampSize = Math.round(sx(width, NORMAL_STAMP_SIZE));
+  const todayStampSize = Math.round(sx(width, TODAY_STAMP_SIZE));
 
   const normalStamp = await sharp(STAMP_PATH)
     .resize({
@@ -183,9 +198,8 @@ async function makeStampComposites({
     const cellX = grid.left + col * grid.cellW;
     const cellY = grid.top + row * grid.cellH;
 
-    // 도장은 칸 내부 중앙보다 살짝 아래쪽
-    const centerX = cellX + grid.cellW * 0.5;
-    const centerY = cellY + grid.cellH * 0.62;
+    const centerX = cellX + grid.cellW * STAMP_X_RATIO;
+    const centerY = cellY + grid.cellH * STAMP_Y_RATIO;
 
     composites.push({
       input: stampBuffer,
