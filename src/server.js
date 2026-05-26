@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 
 const express = require("express");
@@ -58,7 +59,10 @@ function getKoreaToday() {
 function getMonthRange(year, month) {
   const start = `${year}-${String(month).padStart(2, "0")}-01`;
   const lastDate = new Date(year, month, 0).getDate();
-  const end = `${year}-${String(month).padStart(2, "0")}-${String(lastDate).padStart(2, "0")}`;
+
+  const end = `${year}-${String(month).padStart(2, "0")}-${String(
+    lastDate
+  ).padStart(2, "0")}`;
 
   return {
     start,
@@ -100,6 +104,39 @@ app.get("/health", (req, res) => {
   res.json({
     ok: true,
   });
+});
+
+/**
+ * 모바일/브라우저 테스트용 이미지 API
+ *
+ * 브라우저에서 바로 열기:
+ * https://attendance-image-api.onrender.com/test-image
+ *
+ * DB 저장 없이 테스트 날짜만 박아서
+ * 템플릿, 폰트, 도장이 제대로 나오는지 확인하는 용도.
+ */
+app.get("/test-image", async (req, res) => {
+  try {
+    const today = getKoreaToday();
+
+    const imageBuffer = await generateAttendanceImage({
+      year: today.year,
+      month: today.month,
+      today: today.day,
+      attendedDays: [1, 3, 5, 7, 12, 18, today.day],
+    });
+
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "no-store");
+    res.send(imageBuffer);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "테스트 이미지 생성 실패",
+      error: error.message,
+    });
+  }
 });
 
 app.post("/attendance/check", checkApiSecret, async (req, res) => {
