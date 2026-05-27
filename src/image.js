@@ -4,9 +4,36 @@ const sharp = require("sharp");
 
 const ROOT = path.join(__dirname, "..");
 
-const TEMPLATE_PATH = path.join(ROOT, "assets", "calendar-template.png");
-const STAMP_PATH = path.join(ROOT, "assets", "stamp-attend.png");
 const FONT_PATH = path.join(ROOT, "assets", "fonts", "cute-font.ttf");
+
+/**
+ * 지원 테마 목록
+ * 폴더명과 themeKey가 같아야 함.
+ */
+const THEMES = {
+  blue: {
+    name: "블루",
+    titleColor: "#6373C7",
+    dateColor: "#6373C7",
+  },
+  pink: {
+    name: "핑크",
+    titleColor: "#F47FA7",
+    dateColor: "#F47FA7",
+  },
+  beige: {
+    name: "베이지",
+    titleColor: "#C9823A",
+    dateColor: "#C9823A",
+  },
+  purple: {
+    name: "퍼플",
+    titleColor: "#9A7BEA",
+    dateColor: "#9A7BEA",
+  },
+};
+
+const DEFAULT_THEME_KEY = "blue";
 
 /**
  * 기준 이미지 크기
@@ -17,15 +44,6 @@ const BASE_HEIGHT = 1083;
 
 /**
  * 7열 x 6행 전체 칸별 도장 중심 좌표
- *
- * col:
- * 0 = SUN
- * 1 = MON
- * 2 = TUE
- * 3 = WED
- * 4 = THU
- * 5 = FRI
- * 6 = SAT
  */
 const CELL_POSITIONS = [
   [
@@ -98,7 +116,6 @@ const TODAY_STAMP_SIZE = 126;
 
 /**
  * 제목 위치
- * 값이 커질수록 아래로 내려감
  */
 const TITLE_Y = 138;
 
@@ -115,6 +132,43 @@ function scalePoint(width, height, point) {
     x: sx(width, point.x),
     y: sy(height, point.y),
   };
+}
+
+function getSafeThemeKey(themeKey) {
+  if (!themeKey || !THEMES[themeKey]) {
+    return DEFAULT_THEME_KEY;
+  }
+
+  return themeKey;
+}
+
+function getThemePaths(themeKey) {
+  const safeThemeKey = getSafeThemeKey(themeKey);
+
+  return {
+    themeKey: safeThemeKey,
+    templatePath: path.join(
+      ROOT,
+      "assets",
+      safeThemeKey,
+      "calendar-template.png"
+    ),
+    stampPath: path.join(
+      ROOT,
+      "assets",
+      safeThemeKey,
+      "stamp-attend.png"
+    ),
+  };
+}
+
+function getAvailableThemes() {
+  return Object.entries(THEMES).map(([themeKey, theme]) => ({
+    themeKey,
+    themeName: theme.name,
+    titleColor: theme.titleColor,
+    dateColor: theme.dateColor,
+  }));
 }
 
 function getMonthName(month) {
@@ -153,7 +207,16 @@ function getCalendarLayout(year, month) {
   return days;
 }
 
-function makeTextLayer({ year, month, width, height }) {
+function makeTextLayer({
+  year,
+  month,
+  width,
+  height,
+  themeKey,
+}) {
+  const safeThemeKey = getSafeThemeKey(themeKey);
+  const theme = THEMES[safeThemeKey];
+
   const fontBase64 = fs.readFileSync(FONT_PATH).toString("base64");
   const days = getCalendarLayout(year, month);
 
@@ -173,7 +236,7 @@ function makeTextLayer({ year, month, width, height }) {
           y="${y}"
           font-family="CuteFont, Arial, sans-serif"
           font-size="${dateFontSize}"
-          fill="#6373C7"
+          fill="${theme.dateColor}"
           text-anchor="middle"
         >${day}</text>
       `;
@@ -199,7 +262,7 @@ function makeTextLayer({ year, month, width, height }) {
         text-anchor="middle"
         font-family="CuteFont, Arial, sans-serif"
         font-size="${titleFontSize}"
-        fill="#6373C7"
+        fill="${theme.titleColor}"
       >${title}</text>
 
       ${dateTexts}
@@ -214,11 +277,12 @@ async function makeStampComposites({
   month,
   attendedDays,
   today,
+  stampPath,
 }) {
   const normalStampSize = Math.round(sx(width, NORMAL_STAMP_SIZE));
   const todayStampSize = Math.round(sx(width, TODAY_STAMP_SIZE));
 
-  const normalStamp = await sharp(STAMP_PATH)
+  const normalStamp = await sharp(stampPath)
     .resize({
       width: normalStampSize,
       height: normalStampSize,
@@ -227,7 +291,7 @@ async function makeStampComposites({
     .png()
     .toBuffer();
 
-  const todayStamp = await sharp(STAMP_PATH)
+  const todayStamp = await sharp(stampPath)
     .resize({
       width: todayStampSize,
       height: todayStampSize,
@@ -263,20 +327,24 @@ async function generateAttendanceImage({
   month,
   today,
   attendedDays,
+  themeKey = DEFAULT_THEME_KEY,
 }) {
-  if (!fs.existsSync(TEMPLATE_PATH)) {
-    throw new Error("assets/calendar-template.png 파일이 없습니다.");
+  const { themeKey: safeThemeKey, templatePath, stampPath } =
+    getThemePaths(themeKey);
+
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`assets/${safeThemeKey}/calendar-template.png 파일이 없습니다.`);
   }
 
-  if (!fs.existsSync(STAMP_PATH)) {
-    throw new Error("assets/stamp-attend.png 파일이 없습니다.");
+  if (!fs.existsSync(stampPath)) {
+    throw new Error(`assets/${safeThemeKey}/stamp-attend.png 파일이 없습니다.`);
   }
 
   if (!fs.existsSync(FONT_PATH)) {
     throw new Error("assets/fonts/cute-font.ttf 파일이 없습니다.");
   }
 
-  const metadata = await sharp(TEMPLATE_PATH).metadata();
+  const metadata = await sharp(templatePath).metadata();
 
   const width = metadata.width;
   const height = metadata.height;
@@ -286,6 +354,7 @@ async function generateAttendanceImage({
     month,
     width,
     height,
+    themeKey: safeThemeKey,
   });
 
   const stampComposites = await makeStampComposites({
@@ -295,9 +364,10 @@ async function generateAttendanceImage({
     month,
     attendedDays,
     today,
+    stampPath,
   });
 
-  return sharp(TEMPLATE_PATH)
+  return sharp(templatePath)
     .composite([
       {
         input: textLayer,
@@ -312,4 +382,6 @@ async function generateAttendanceImage({
 
 module.exports = {
   generateAttendanceImage,
+  getAvailableThemes,
+  getSafeThemeKey,
 };
