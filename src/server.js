@@ -1,10 +1,13 @@
-
 require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
 const { supabase } = require("./supabase");
-const { generateAttendanceImage } = require("./image");
+const {
+  generateAttendanceImage,
+  getAvailableThemes,
+  getSafeThemeKey,
+} = require("./image");
 
 const app = express();
 
@@ -93,6 +96,46 @@ async function getAttendedDays(userId, year, month) {
   });
 }
 
+async function getUserProfile(userId) {
+  const { data, error } = await supabase
+    .from("attendance_profiles")
+    .select("user_id,user_name,theme_key")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+async function upsertUserTheme({ userId, userName, themeKey }) {
+  const safeThemeKey = getSafeThemeKey(themeKey);
+
+  const { data, error } = await supabase
+    .from("attendance_profiles")
+    .upsert(
+      {
+        user_id: userId,
+        user_name: userName || null,
+        theme_key: safeThemeKey,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "user_id",
+      }
+    )
+    .select("user_id,user_name,theme_key")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
 app.get("/", (req, res) => {
   res.json({
     ok: true,
@@ -107,23 +150,86 @@ app.get("/health", (req, res) => {
 });
 
 /**
+ * 테마 목록 조회
+ */
+app.get("/themes", checkApiSecret, (req, res) => {
+  res.json({
+    ok: true,
+    themes: getAvailableThemes(),
+  });
+});
+
+/**
+ * 유저 테마 변경
+ *
+ * POST /profile/theme
+ * {
+ *   "userId": "lime1126",
+ *   "userName": "라임",
+ *   "themeKey": "pink"
+ * }
+ */
+app.post("/profile/theme", checkApiSecret, async (req, res) => {
+  try {
+    const { userId, userName, themeKey } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        message: "userId가 필요합니다.",
+      });
+    }
+
+    if (!themeKey) {
+      return res.status(400).json({
+        message: "themeKey가 필요합니다.",
+      });
+    }
+
+    const safeThemeKey = getSafeThemeKey(themeKey);
+
+    if (safeThemeKey !== themeKey) {
+      return res.status(400).json({
+        message: "지원하지 않는 themeKey입니다.",
+        availableThemes: getAvailableThemes(),
+      });
+    }
+
+    const profile = await upsertUserTheme({
+      userId,
+      userName,
+      themeKey: safeThemeKey,
+    });
+
+    res.json({
+      ok: true,
+      message: "테마가 변경되었습니다.",
+      profile,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "테마 변경 실패",
+      error: error.message,
+    });
+  }
+});
+
+/**
  * 모바일/브라우저 테스트용 이미지 API
- *
- * 브라우저에서 바로 열기:
- * https://attendance-image-api.onrender.com/test-image
- *
- * DB 저장 없이 테스트 날짜만 박아서
- * 템플릿, 폰트, 도장이 제대로 나오는지 확인하는 용도.
+ * ?themeKey=pink 처럼 테스트 가능
  */
 app.get("/test-image", async (req, res) => {
   try {
     const today = getKoreaToday();
+    const themeKey = getSafeThemeKey(req.query.themeKey || "blue");
 
     const imageBuffer = await generateAttendanceImage({
       year: today.year,
       month: today.month,
       today: today.day,
       attendedDays: [1, 3, 5, 7, 12, 18, today.day],
+      themeKey,
     });
 
     res.setHeader("Content-Type", "image/png");
@@ -139,6 +245,10 @@ app.get("/test-image", async (req, res) => {
   }
 });
 
+/**
+ * 실제 출석 체크
+ * 유저 theme_key를 DB에서 읽어서 해당 테마로 이미지 생성
+ */
 app.post("/attendance/check", checkApiSecret, async (req, res) => {
   try {
     const { userId, userName } = req.body;
@@ -168,6 +278,9 @@ app.post("/attendance/check", checkApiSecret, async (req, res) => {
       throw upsertError;
     }
 
+    const profile = await getUserProfile(userId);
+    const themeKey = getSafeThemeKey(profile?.theme_key || "blue");
+
     const attendedDays = await getAttendedDays(
       userId,
       today.year,
@@ -179,6 +292,7 @@ app.post("/attendance/check", checkApiSecret, async (req, res) => {
       month: today.month,
       today: today.day,
       attendedDays,
+      themeKey,
     });
 
     res.setHeader("Content-Type", "image/png");
@@ -194,6 +308,9 @@ app.post("/attendance/check", checkApiSecret, async (req, res) => {
   }
 });
 
+/**
+ * 월간 출석 이미지 조회
+ */
 app.get("/attendance/image", checkApiSecret, async (req, res) => {
   try {
     const userId = req.query.userId;
@@ -208,6 +325,9 @@ app.get("/attendance/image", checkApiSecret, async (req, res) => {
 
     const todayInfo = getKoreaToday();
 
+    const profile = await getUserProfile(userId);
+    const themeKey = getSafeThemeKey(profile?.theme_key || "blue");
+
     const attendedDays = await getAttendedDays(userId, year, month);
 
     const isCurrentMonth =
@@ -218,6 +338,7 @@ app.get("/attendance/image", checkApiSecret, async (req, res) => {
       month,
       today: isCurrentMonth ? todayInfo.day : null,
       attendedDays,
+      themeKey,
     });
 
     res.setHeader("Content-Type", "image/png");
